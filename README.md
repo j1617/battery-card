@@ -94,6 +94,21 @@ type: custom:battery-card
 title: 电池状态
 ```
 
+#### 手动指定实体
+
+如果自动识别遗漏了某些电池实体，可以手动指定：
+
+```yaml
+type: custom:battery-card
+title: 电池状态
+entities:
+  - sensor.bedroom_lock_battery
+  - sensor.living_room_remote_battery
+  - sensor.my_custom_battery_sensor
+```
+
+> 配置 `entities` 后将跳过自动扫描，只显示指定的实体。
+
 #### 完整配置
 
 ```yaml
@@ -129,6 +144,7 @@ sort_by: level
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
+| `entities` | list | [] | 手动指定实体列表（配置后跳过自动扫描）|
 | `title` | string | 电池状态 | 卡片标题 |
 | `sort_by` | string | level | 排序方式：level（电量）/ name（名称）|
 | `sort_order` | string | asc | 排序顺序：asc（升序）/ desc（降序）|
@@ -153,11 +169,15 @@ sort_by: level
 
 ## 工作原理
 
-卡片会自动扫描 Home Assistant 中所有包含电量信息的实体：
+卡片通过以下规则识别电池实体：
 
-1. **电池传感器** - 如 `sensor.battery_level`
-2. **设备电量属性** - 带有 `battery_level` 或 `battery` 属性的传感器
-3. **直接数值** - state 为 0-100 数值且合理的传感器
+1. **device_class** - 实体 `device_class` 为 `battery` 的传感器
+2. **关键词匹配** - 实体 ID 或 `friendly_name` 包含以下关键词：
+   - 英文：`battery`、`battery_level`
+   - 中文：`电量`、`电池`、`充电`、`剩余电量`
+3. **手动指定** - 通过 `entities` 配置项直接指定
+
+> 满足以上**任一条件**即会被识别为电池实体。
 
 支持的电池设备包括但不限于：
 - 智能门锁
@@ -195,7 +215,7 @@ secondary_color: '#94a3b8'
 ## 项目信息
 
 - **GitHub**: https://github.com/j1617/battery-card
-- **版本**: v1.0.0
+- **版本**: v1.1.0
 - **许可证**: MIT
 
 ## 许可证

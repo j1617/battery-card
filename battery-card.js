@@ -1,11 +1,11 @@
 /**
  * Battery Card - Home Assistant Lovelace Custom Card
- * Version: 1.0.0
+ * Version: 1.1.0
  * Description: Display battery status and level for all battery entities
  */
 
 console.info(
-  '%c BATTERY-CARD %c v1.0.0 ',
+  '%c BATTERY-CARD %c v1.1.0 ',
   'color: #059669; font-weight: bold; background: #ecfdf5; padding: 2px 6px; border-radius: 3px 0 0 3px;',
   'color: white; background: #059669; padding: 2px 6px; border-radius: 0 3px 3px 0;'
 );
@@ -46,51 +46,102 @@ class BatteryCard extends HTMLElement {
     this._updateCard();
   }
 
+  _isBatteryEntity(entityId, state) {
+    // 1. device_class 为 battery 的一定是电池
+    if (state.attributes && state.attributes.device_class === 'battery') {
+      return true;
+    }
+
+    // 2. 实体 ID 或 friendly_name 包含电池相关关键词
+    const id = entityId.toLowerCase();
+    const name = (state.attributes && (state.attributes.friendly_name || ''))
+      .toLowerCase();
+    const combined = id + ' ' + name;
+
+    const keywords = [
+      'battery',        // 英文：电池
+      'batterylevel',   // battery level 变体
+      'battery_level',
+      'batterypct',
+      'batterypct',
+      '电量',            // 中文：电量
+      '电池',            // 中文：电池
+      '充电',            // 中文：充电
+      '剩余电量',        // 中文：剩余电量
+    ];
+
+    for (const kw of keywords) {
+      if (combined.includes(kw)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   _getBatteryEntities() {
     if (!this._hass) return [];
 
     const entities = [];
     const seen = new Set();
 
-    // 遍历所有实体，查找电池相关的
+    // 如果用户手动指定了实体列表，只显示这些
+    if (this.config.entities && Array.isArray(this.config.entities) && this.config.entities.length > 0) {
+      for (const entityId of this.config.entities) {
+        if (seen.has(entityId)) continue;
+        const state = this._hass.states[entityId];
+        if (!state) continue;
+        const item = this._buildBatteryItem(entityId, state);
+        if (item) {
+          entities.push(item);
+          seen.add(entityId);
+        }
+      }
+      return this._sortEntities(entities);
+    }
+
+    // 自动扫描：遍历所有实体，查找电池相关的
     for (const [entityId, state] of Object.entries(this._hass.states)) {
       // 跳过非传感器
       if (!entityId.startsWith('sensor.')) continue;
-      
+
       // 跳过已经处理过的
       if (seen.has(entityId)) continue;
 
+      // 关键过滤：必须通过名称/device_class 判断为电池实体
+      if (!this._isBatteryEntity(entityId, state)) continue;
+
       const batteryLevel = this._getBatteryLevel(state);
-      const batteryState = this._getBatteryState(state);
 
-      // 如果是电池实体或包含电量信息
-      if (batteryLevel !== null || batteryState !== null) {
-        const friendlyName = state.attributes.friendly_name || 
-                             state.attributes.device_class || 
-                             entityId.replace('sensor.', '').replace(/_/g, ' ');
-
-        // 尝试获取房间/区域信息
-        const areaId = this._getAreaId(entityId);
-        const deviceName = state.attributes.device_class || 
-                          (state.attributes.friendly_name ? '' : friendlyName);
-
-        entities.push({
-          entity_id: entityId,
-          name: friendlyName,
-          device_name: deviceName,
-          area: areaId,
-          battery_level: batteryLevel,
-          battery_state: batteryState,
-          icon: this._getBatteryIcon(batteryLevel),
-          color: this._getBatteryColor(batteryLevel),
-          unit: '%',
-          last_changed: state.last_changed,
-        });
-        seen.add(entityId);
+      // 如果是电池实体，即使拿不到具体数值也展示
+      if (batteryLevel !== null) {
+        const item = this._buildBatteryItem(entityId, state);
+        if (item) {
+          entities.push(item);
+          seen.add(entityId);
+        }
       }
     }
 
     return this._sortEntities(entities);
+  }
+
+  _buildBatteryItem(entityId, state) {
+    const batteryLevel = this._getBatteryLevel(state);
+    const friendlyName = state.attributes.friendly_name ||
+                         entityId.replace('sensor.', '').replace(/_/g, ' ');
+    const areaId = this._getAreaId(entityId);
+
+    return {
+      entity_id: entityId,
+      name: friendlyName,
+      area: areaId,
+      battery_level: batteryLevel,
+      icon: this._getBatteryIcon(batteryLevel),
+      color: this._getBatteryColor(batteryLevel),
+      unit: '%',
+      last_changed: state.last_changed,
+    };
   }
 
   _getBatteryLevel(state) {
