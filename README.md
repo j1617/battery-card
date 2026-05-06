@@ -1,12 +1,16 @@
 # Home Assistant 电池状态卡片
 
+HA插件交流QQ群： 754364399
+
+关注公众号【工具箱达人】，里面有详细的使用教程
+
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz/)
-[![version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/j1617/battery-card)
+[![version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/j1617/battery-card)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 一个优雅的 Home Assistant Lovelace 自定义卡片，自动显示所有电池设备的状态和电量。
 
-**当前版本: v1.0.0**
+**当前版本: v1.2.0**
 
 ## 预览效果
 
@@ -215,7 +219,7 @@ secondary_color: '#94a3b8'
 ## 项目信息
 
 - **GitHub**: https://github.com/j1617/battery-card
-- **版本**: v1.1.0
+- **版本**: v1.2.0
 - **许可证**: MIT
 
 ## 许可证
