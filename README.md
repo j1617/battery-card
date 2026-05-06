@@ -5,39 +5,51 @@ HA插件交流QQ群： 754364399
 关注公众号【工具箱达人】，里面有详细的使用教程
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz/)
-[![version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/j1617/battery-card)
+[![version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/j1617/battery-card)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 一个优雅的 Home Assistant Lovelace 自定义卡片，自动显示所有电池设备的状态和电量。
 
-**当前版本: v1.2.0**
+**当前版本: v1.3.0**
 
 ## 预览效果
+
+### 纵向列表模式（默认）
 
 ```
 ┌─────────────────────────────────────────┐
 │  🔋 电池状态              5 个设备      │
 │                                         │
-│  ┌─────────────────────────────────┐   │
-│  │ 🟢 正常 3  🟡 预警 1  🔴 紧急 1 │   │
-│  └─────────────────────────────────┘   │
+│  🟢 正常 3  🟡 预警 1  🔴 紧急 1 │   │
 │                                         │
-│  📱 客厅遥控器                          │
-│  ████████████████░░░░░░░░░  85%       │
-│                                         │
-│  📱 卧室门锁                            │
-│  ██████████░░░░░░░░░░░░░░░  45%       │
-│                                         │
-│  📱 厨房温度计                          │
-│  ████░░░░░░░░░░░░░░░░░░░░░  15%       │
-│                                         │
-│  📱 书房烟雾报警器                      │
-│  ██████████████████░░░  92%           │
-│                                         │
-│  📱 走廊人体感应                        │
-│  ████████████████████░  100%          │
+│  📱 客厅遥控器           ████████ 85%  │
+│  📱 卧室门锁             █████ 45%     │
+│  📱 厨房温度计           ███ 15%       │
+│  📱 书房烟雾报警器       █████████ 92% │
+│  📱 走廊人体感应         ██████████ 100%│
 │                                         │
 │  🟢 实时更新                            │
+└─────────────────────────────────────────┘
+```
+
+### 横向三列模式
+
+```
+┌─────────────────────────────────────────┐
+│  🔋 电池状态              5 个设备      │
+│                                         │
+│  🟢 正常 3  🟡 预警 1  🔴 紧急 1 │   │
+│                                         │
+│ ┌───────────┬───────────┬─────────────┐ │
+│ │ 🟢 正常 3 │ 🟡 预警 1 │ 🔴 紧急 1  │ │
+│ ├───────────┼───────────┼─────────────┤ │
+│ │ 书房烟雾  │ 卧室门锁  │ 厨房温度计  │ │
+│ │   92%     │   45%     │   15%       │ │
+│ │ 客厅遥控器│           │             │ │
+│ │   85%     │           │             │ │
+│ │ 走廊人体  │           │             │ │
+│ │  100%     │           │             │ │
+│ └───────────┴───────────┴─────────────┘ │
 └─────────────────────────────────────────┘
 ```
 
@@ -113,24 +125,26 @@ entities:
 
 > 配置 `entities` 后将跳过自动扫描，只显示指定的实体。
 
-#### 完整配置
+#### 显示模式配置
+
+##### 纵向列表（默认）
 
 ```yaml
 type: custom:battery-card
-title: 我的电池
-sort_by: level        # level | name
-sort_order: asc       # asc | desc
-group_by: area        # null | area
-show_empty: false
+title: 电池状态
+display_mode: vertical  # 纵向列表
+sort_by: level          # level | name
+sort_order: asc         # asc（低电量在前）| desc（高电量在前）
+```
 
-# 阈值设置
-critical_level: 20    # 紧急阈值
-warning_level: 50     # 预警阈值
+##### 横向三列
 
-# 样式设置
-background_color: '#ffffff'
-text_color: '#1e293b'
-secondary_color: '#64748b'
+```yaml
+type: custom:battery-card
+title: 电池状态
+display_mode: horizontal  # 横向三列（正常 | 预警 | 紧急）
+sort_by: level            # asc：低电量在前（紧急列先看到低电量）| desc：高电量在前
+sort_order: asc
 ```
 
 #### 按房间分组
@@ -150,8 +164,9 @@ sort_by: level
 |------|------|--------|------|
 | `entities` | list | [] | 手动指定实体列表（配置后跳过自动扫描）|
 | `title` | string | 电池状态 | 卡片标题 |
+| `display_mode` | string | vertical | 显示模式：vertical（纵向）/ horizontal（横向三列）|
 | `sort_by` | string | level | 排序方式：level（电量）/ name（名称）|
-| `sort_order` | string | asc | 排序顺序：asc（升序）/ desc（降序）|
+| `sort_order` | string | asc | 排序顺序：asc（低电量在前）/ desc（高电量在前）|
 | `group_by` | string | null | 分组方式：null（不分组）/ area（按房间）|
 | `show_empty` | boolean | false | 是否显示空状态 |
 
@@ -219,7 +234,7 @@ secondary_color: '#94a3b8'
 ## 项目信息
 
 - **GitHub**: https://github.com/j1617/battery-card
-- **版本**: v1.2.0
+- **版本**: v1.3.0
 - **许可证**: MIT
 
 ## 许可证
