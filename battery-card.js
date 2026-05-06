@@ -64,9 +64,8 @@ class BatteryCard extends HTMLElement {
       'battery_level',
       'batterypct',
       'batterypct',
-      '电量',            // 中文：电量
+      '电池电量',            // 中文：电池电量
       '电池',            // 中文：电池
-      '充电',            // 中文：充电
       '剩余电量',        // 中文：剩余电量
     ];
 
