@@ -1,11 +1,12 @@
 /**
  * Battery Card - Home Assistant Lovelace Custom Card
- * Version: 1.3.0
+ * Version: 1.4.0
  * Description: Display battery status and level for all battery entities
+ * Compatible with HA 2024.x+ grid layout and visibility features
  */
 
 console.info(
-  '%c BATTERY-CARD %c v1.3.0 ',
+  '%c BATTERY-CARD %c v1.4.0 ',
   'color: #059669; font-weight: bold; background: #ecfdf5; padding: 2px 6px; border-radius: 3px 0 0 3px;',
   'color: white; background: #059669; padding: 2px 6px; border-radius: 0 3px 3px 0;'
 );
@@ -16,7 +17,20 @@ class BatteryCard extends HTMLElement {
     this.attachShadow({ mode: 'open' });
   }
 
+  static getStubConfig() {
+    return {
+      title: '电池状态',
+      display_mode: 'vertical',
+      sort_by: 'level',
+      sort_order: 'asc',
+    };
+  }
+
   setConfig(config) {
+    if (!config.entities && !config.switch_entity) {
+      // 允许自动扫描模式，不需要强制配置实体
+    }
+
     this.config = {
       // 默认配置
       title: '电池状态',
@@ -29,12 +43,15 @@ class BatteryCard extends HTMLElement {
       // 阈值配置
       critical_level: 20,
       warning_level: 50,
-      // 样式配置
-      background_color: '#ffffff',
-      text_color: '#1e293b',
-      secondary_color: '#64748b',
+      // 样式配置（使用HA变量作为默认值）
+      background_color: 'var(--ha-card-background, #ffffff)',
+      text_color: 'var(--primary-text-color, #1e293b)',
+      secondary_color: 'var(--secondary-text-color, #64748b)',
       ...config
     };
+
+    // 保存实体数量用于 getCardSize
+    this._entityCount = this._getEntityCount();
     this._updateCard();
   }
 
@@ -47,6 +64,41 @@ class BatteryCard extends HTMLElement {
     this._updateCard();
   }
 
+  // 获取实体数量
+  _getEntityCount() {
+    if (this.config.entities && Array.isArray(this.config.entities) && this.config.entities.length > 0) {
+      return this.config.entities.length;
+    }
+    // 自动扫描模式，返回预估数量
+    return 5; // 默认预估
+  }
+
+  // HA Grid 布局支持 - 返回卡片占用的高度单位
+  getCardSize() {
+    const count = this._entityCount || 5;
+    if (this.config.display_mode === 'horizontal') {
+      return 3;
+    }
+    // 纵向模式：根据实体数量计算，最多6
+    return Math.min(Math.ceil(count / 3) * 2 + 2, 6);
+  }
+
+  // HA Grid 布局选项
+  getGridOptions() {
+    return {
+      columns: this.config.display_mode === 'horizontal' ? 12 : 6,
+      rows: this.getCardSize()
+    };
+  }
+
+  // HA 可见性支持
+  getLayoutOptions() {
+    return {
+      grid_columns: this.config.display_mode === 'horizontal' ? 12 : 6,
+      grid_rows: this.getCardSize()
+    };
+  }
+
   _isBatteryEntity(entityId, state) {
     // 1. device_class 为 battery 的一定是电池
     if (state.attributes && state.attributes.device_class === 'battery') {
@@ -55,19 +107,12 @@ class BatteryCard extends HTMLElement {
 
     // 2. 实体 ID 或 friendly_name 包含电池相关关键词
     const id = entityId.toLowerCase();
-    const name = (state.attributes && (state.attributes.friendly_name || ''))
-      .toLowerCase();
+    const name = (state.attributes && (state.attributes.friendly_name || '')).toLowerCase();
     const combined = id + ' ' + name;
 
     const keywords = [
-      'battery',        // 英文：电池
-      'batterylevel',   // battery level 变体
-      'battery_level',
-      'batterypct',
-      'batterypct',
-      '电池电量',        // 中文：电池电量
-      '电池',            // 中文：电池
-      '剩余电量',        // 中文：剩余电量
+      'battery', 'batterylevel', 'battery_level', 'batterypct',
+      '电池电量', '电池', '剩余电量',
     ];
 
     for (const kw of keywords) {
@@ -97,6 +142,8 @@ class BatteryCard extends HTMLElement {
           seen.add(entityId);
         }
       }
+      // 更新实体数量
+      this._entityCount = entities.length;
       return this._sortEntities(entities);
     }
 
@@ -116,6 +163,8 @@ class BatteryCard extends HTMLElement {
       }
     }
 
+    // 更新实体数量
+    this._entityCount = entities.length;
     return this._sortEntities(entities);
   }
 
@@ -178,10 +227,10 @@ class BatteryCard extends HTMLElement {
   }
 
   _getBatteryColor(level) {
-    if (level === null) return '#94a3b8';
-    if (level <= this.config.critical_level) return '#ef4444';
-    if (level <= this.config.warning_level) return '#f59e0b';
-    return '#10b981';
+    if (level === null) return 'var(--state-icon-color, #94a3b8)';
+    if (level <= this.config.critical_level) return 'var(--error-color, #ef4444)';
+    if (level <= this.config.warning_level) return 'var(--warning-color, #f59e0b)';
+    return 'var(--success-color, #10b981)';
   }
 
   _sortEntities(entities) {
@@ -298,9 +347,9 @@ class BatteryCard extends HTMLElement {
 
       bodyHtml = `
         <div class="horizontal-layout">
-          ${createColumn('正常', goodCount, '#10b981', goodEntities, '🟢')}
-          ${createColumn('预警', warningCount, '#f59e0b', warningEntities, '🟡')}
-          ${createColumn('紧急', criticalCount, '#ef4444', criticalEntities, '🔴')}
+          ${createColumn('正常', goodCount, 'var(--success-color, #10b981)', goodEntities, '🟢')}
+          ${createColumn('预警', warningCount, 'var(--warning-color, #f59e0b)', warningEntities, '🟡')}
+          ${createColumn('紧急', criticalCount, 'var(--error-color, #ef4444)', criticalEntities, '🔴')}
         </div>
       `;
     } else {
@@ -346,19 +395,26 @@ class BatteryCard extends HTMLElement {
       <style>
         :host {
           display: block;
+          height: 100%;
         }
 
         ha-card {
           background: ${background_color};
           border-radius: var(--ha-card-border-radius, 16px);
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-          overflow: hidden;
+          box-shadow: var(--ha-card-box-shadow, 0 2px 12px rgba(0, 0, 0, 0.08));
+          overflow: visible;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
         }
 
         .card-content {
           padding: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          font-family: var(--paper-font-common-base_-_font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
           color: ${text_color};
+          flex: 1;
+          display: flex;
+          flex-direction: column;
         }
 
         /* 顶部标题 */
@@ -382,7 +438,7 @@ class BatteryCard extends HTMLElement {
         }
 
         .battery-count {
-          background: #f1f5f9;
+          background: var(--chip-background-color, #f1f5f9);
           padding: 4px 10px;
           border-radius: 12px;
           font-size: 12px;
@@ -396,7 +452,7 @@ class BatteryCard extends HTMLElement {
           gap: 12px;
           padding: 12px 20px;
           margin: 14px 20px;
-          background: #f8fafc;
+          background: var(--secondary-background-color, #f8fafc);
           border-radius: 12px;
         }
 
@@ -414,9 +470,9 @@ class BatteryCard extends HTMLElement {
           border-radius: 50%;
         }
 
-        .stat-good .stat-dot { background: #10b981; }
-        .stat-warning .stat-dot { background: #f59e0b; }
-        .stat-critical .stat-dot { background: #ef4444; }
+        .stat-good .stat-dot { background: var(--success-color, #10b981); }
+        .stat-warning .stat-dot { background: var(--warning-color, #f59e0b); }
+        .stat-critical .stat-dot { background: var(--error-color, #ef4444); }
 
         .stat-label {
           color: ${secondary_color};
@@ -452,7 +508,7 @@ class BatteryCard extends HTMLElement {
         }
 
         .battery-item:hover {
-          background: #f8fafc;
+          background: var(--secondary-background-color, #f8fafc);
         }
 
         .battery-icon {
@@ -482,7 +538,7 @@ class BatteryCard extends HTMLElement {
 
         .battery-progress-track {
           height: 5px;
-          background: #e2e8f0;
+          background: var(--divider-color, #e2e8f0);
           border-radius: 3px;
           overflow: hidden;
         }
@@ -520,7 +576,7 @@ class BatteryCard extends HTMLElement {
         }
 
         .h-column {
-          background: #f8fafc;
+          background: var(--secondary-background-color, #f8fafc);
           border-radius: 12px;
           overflow: hidden;
         }
@@ -542,7 +598,7 @@ class BatteryCard extends HTMLElement {
           align-items: center;
           gap: 6px;
           padding: 10px 12px;
-          background: #fff;
+          background: ${background_color};
         }
 
         .h-column-icon {
@@ -610,7 +666,7 @@ class BatteryCard extends HTMLElement {
 
         .h-empty {
           text-align: center;
-          color: #cbd5e1;
+          color: var(--disabled-text-color, #cbd5e1);
           font-size: 14px;
           padding: 20px 0;
         }
@@ -626,8 +682,8 @@ class BatteryCard extends HTMLElement {
         /* 底部 */
         .card-footer {
           padding: 12px 20px 18px;
-          border-top: 1px solid #f1f5f9;
-          margin-top: 4px;
+          border-top: 1px solid var(--divider-color, #f1f5f9);
+          margin-top: auto;
         }
 
         .update-info {
@@ -641,7 +697,7 @@ class BatteryCard extends HTMLElement {
         .update-dot {
           width: 6px;
           height: 6px;
-          background: #10b981;
+          background: var(--primary-color, #10b981);
           border-radius: 50%;
         }
 
@@ -658,24 +714,6 @@ class BatteryCard extends HTMLElement {
             border-radius: 12px;
           }
 
-          .stats-bar {
-            flex-wrap: wrap;
-          }
-
-          .stat-item {
-            flex: 1 1 33%;
-          }
-
-          .battery-level {
-            margin-left: 8px;
-          }
-
-          .level-value {
-            font-size: 18px;
-          }
-        }
-
-        @media (max-width: 400px) {
           .stats-bar {
             flex-wrap: wrap;
           }
@@ -709,19 +747,6 @@ class BatteryCard extends HTMLElement {
         </div>
       </ha-card>
     `;
-  }
-
-  getCardSize() {
-    return this.config && this.config.display_mode === 'horizontal' ? 3 : 4;
-  }
-
-  static getStubConfig() {
-    return {
-      title: '电池状态',
-      display_mode: 'vertical',
-      sort_by: 'level',
-      sort_order: 'asc',
-    };
   }
 }
 
